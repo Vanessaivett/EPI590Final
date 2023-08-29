@@ -1,0 +1,93 @@
+---
+title: "Ebola Cases"
+author: "Vanessa Guardado"
+format: html
+editor: visual
+execute: 
+  echo: false
+  warning: false
+---
+
+Data Cleaning
+
+```{r}
+#Uploading csv file
+EbolaCases <- here::here("ebola_data_db_format.csv")
+EbolaCases <- read.csv(EbolaCases)
+
+#Reorganize data/ only keep confirmed cases of Ebola Cases by Country and then drop column "Indicator"
+library(dplyr)
+ConfirmedEbolaCases <- EbolaCases %>% filter(Indicator == "Cumulative number of confirmed Ebola cases")
+ConfirmedEbolaCases = subset(ConfirmedEbolaCases, select =  -c(Indicator))
+
+#Change Column Value to Confirmed Cases
+colnames(ConfirmedEbolaCases)[3] <- "Confirmed_Cases"
+
+#Separate Date into Month and Year
+library(tidyverse)
+
+ConfirmedEbolaCases <- ConfirmedEbolaCases %>% separate(Date, sep ="/", into = c("Month", "Day", "Year"))
+
+#Edit Contry Names
+table(ConfirmedEbolaCases$Country, useNA = "always")
+ConfirmedEbolaCases$Country[ConfirmedEbolaCases$Country == "Guinea 2"] = "Guinea"
+ConfirmedEbolaCases$Country[ConfirmedEbolaCases$Country == "Liberia 2"] = "Liberia"
+```
+
+Table Result
+
+```{r}
+
+library(gtsummary)
+
+tbl_summary(ConfirmedEbolaCases,
+						by = Country,
+						include = c(Country, Year, Confirmed_Cases))
+```
+
+Regression Result
+
+```{r}
+
+tbl_uvregression(ConfirmedEbolaCases,
+								 y= Confirmed_Cases,
+								 include = c(Country, Month),
+								 method = lm)
+
+Model1 <- lm(Confirmed_Cases ~ Country +Month,
+									data = ConfirmedEbolaCases)
+
+tbl_regression(Model1,
+							 intercept = TRUE,
+							 label = list(Month ~ "Month of Confirmed Case"))
+
+EbolaTable <- tbl_regression(Model1,
+							 intercept = TRUE,
+							 label = list(Month ~ "Month of Confirmed Case"))
+```
+
+Histogram Figure
+
+```{r}
+#| label: fig-hist
+#| fig-cap: "Confirmed Ebola Cases" 
+hist(ConfirmedEbolaCases$Confirmed_Cases)
+```
+
+Inline Stats
+
+```{r}
+
+stats <- list(n= nrow(ConfirmedEbolaCases),
+							mean_cases = mean(ConfirmedEbolaCases$Confirmed_Cases))
+
+inline_text(EbolaTable, variable = "Country")
+```
+
+Cross Referencing
+
+@fig-hist contains a histogram of total confirmed Ebola Cases
+
+Data consists of probable, and confirmed cases for Ebola Cases from 10 countries during 2014-2016. To simply the data, I just focused on confirmed cases and cleaned up the data before starting. I got the data from one of the links github had and linked it below:
+
+https://data.humdata.org/dataset/ebola-cases-2014
